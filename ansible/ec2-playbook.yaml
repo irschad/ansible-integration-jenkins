@@ -15,7 +15,7 @@
 - name: Install Docker-compose
   hosts: all
   become: yes
-  become_user: irschad
+  become_user: ec2-user
   tasks:
     - name: Create docker-compose directory
       file:

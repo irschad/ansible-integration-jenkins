@@ -18,7 +18,12 @@ This project demonstrates the integration of Ansible with Jenkins to automate th
 
 ## Project Steps
 
-### Step 1: Create and Configure Ansible Control Node
+### Step 1: Create and Configure Jenkins Server
+1. Launch a dedicated EC2 instance to host Jenkins.
+2. Install Jenkins on the server and configure required plugins (e.g., SSH Agent, SSH Pipeline Steps).
+3. Secure Jenkins with SSH key-based authentication and configure credentials.
+
+### Step 2: Create and Configure Ansible Control Node
 1. Launch a dedicated EC2 instance for the Ansible Control Node.
 2. Install the following on the server:
    - Ansible
@@ -26,7 +31,7 @@ This project demonstrates the integration of Ansible with Jenkins to automate th
    - Boto3
 3. Configure AWS credentials on the Control Node for dynamic inventory support.
 
-### Step 2: Write Ansible Playbooks
+### Step 3: Write Ansible Playbooks
 1. Create an `ansible/` folder containing the following files:
    - **`ansible.cfg`**: Configuration for Ansible, including remote user and private key.
    - **`inventory_aws_ec2.yaml`**: Dynamic inventory plugin configuration for AWS.
@@ -66,7 +71,7 @@ host_key_checking = False
       command: docker-compose --version
 ```
 
-### Step 3: Jenkins Pipeline Configuration
+### Step 4: Jenkins Pipeline Configuration
 Create a Jenkins pipeline with the following stages:
    - **Copy Files to Ansible Server**:
      - Use `scp` to copy playbooks and SSH keys to the Ansible Control Node.
@@ -117,7 +122,7 @@ pipeline {
 } 
 ```
 
-### Step 4: Run Jenkins Pipeline
+### Step 5: Run Jenkins Pipeline
 1. Run Jenkins pipeline and verify from console that the steps are executed.
 2. Connect to Ansible control node and verify the files are copied and the EC2 servers are configured.
 

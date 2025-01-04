@@ -17,12 +17,8 @@ This project demonstrates the integration of Ansible with Jenkins to automate th
 ---
 
 ## Project Steps
-### Step 1: Create and Configure Jenkins Server
-1. Launch a dedicated EC2 instance to host Jenkins.
-2. Install Jenkins on the server and configure required plugins (e.g., SSH Agent, SSH Pipeline Steps).
-3. Secure Jenkins with SSH key-based authentication and configure credentials.
 
-### Step 2: Create and Configure Ansible Control Node
+### Step 1: Create and Configure Ansible Control Node
 1. Launch a dedicated EC2 instance for the Ansible Control Node.
 2. Install the following on the server:
    - Ansible
@@ -30,7 +26,7 @@ This project demonstrates the integration of Ansible with Jenkins to automate th
    - Boto3
 3. Configure AWS credentials on the Control Node for dynamic inventory support.
 
-### Step 3: Write Ansible Playbooks
+### Step 2: Write Ansible Playbooks
 1. Create an `ansible/` folder containing the following files:
    - **`ansible.cfg`**: Configuration for Ansible, including remote user and private key.
    - **`inventory_aws_ec2.yaml`**: Dynamic inventory plugin configuration for AWS.
@@ -70,42 +66,60 @@ host_key_checking = False
       command: docker-compose --version
 ```
 
-### Step 4: Jenkins Pipeline Configuration
-1. Create a Jenkins pipeline with the following stages:
+### Step 3: Jenkins Pipeline Configuration
+Create a Jenkins pipeline with the following stages:
    - **Copy Files to Ansible Server**:
      - Use `scp` to copy playbooks and SSH keys to the Ansible Control Node.
    - **Execute Ansible Playbook**:
      - Connect to the Control Node and execute the playbook remotely.
-2. Key file: `Jenkinsfile`
+
 
 #### Example `Jenkinsfile`
 ```groovy
-pipeline {
+pipeline {   
     agent any
+    environment {
+        ANSIBLE_SERVER = "98.80.100.76"
+    }
     stages {
-        stage('Copy Files') {
+        stage("copy files to ansible server") {
             steps {
-                sh '''
-                scp -i /path/to/private/key.pem ansible/* ec2-user@<Ansible-Control-Node-IP>:~/ansible/
-                '''
+                echo "copying all necessary files to ansible control node"
+                sshagent(['ansible-server-key']) {
+                    sh "scp -o StrictHostKeyChecking=no ansible/* ec2-user@${ANSIBLE_SERVER}:/home/ec2-user"
+                    withCredentials([sshUserPrivateKey(credentialsId: 'ec2-server-key', keyFileVariable: 'keyfile', usernameVariable: 'user')]) {
+                        sh 'scp ${keyfile} ec2-user@${ANSIBLE_SERVER}:/home/ec2-user/id_ed22519_ec2'
+                    }
+
+                }
             }
         }
-        stage('Run Playbook') {
+        stage("execute ansible playbook") {
             steps {
-                sh '''
-                ssh -i /path/to/private/key.pem ec2-user@<Ansible-Control-Node-IP> "ansible-playbook ~/ansible/ec2-playbook.yaml"
-                '''
+                script {
+                    echo "calling ansible server to configure ec2 instances"
+                    def remote = [:]
+                    remote.name = "server-one"
+                    remote.host = env.ANSIBLE_SERVER
+                    remote.allowAnyHosts = true
+
+                    withCredentials([sshUserPrivateKey(credentialsId: 'ansible-server-key', keyFileVariable: 'keyfile', usernameVariable: 'user')]) {
+                        remote.user = user
+                        remote.identityFile = keyfile
+                        sshScript remote: remote, script: "prepare-ansible-server.sh"
+                        sshCommand remote: remote, command: "ansible-playbook ec2-playbook.yaml"
+                    }
+                    
+                }
             }
         }
     }
-}
+} 
 ```
 
-### Step 5: Automate CI/CD Pipeline
-1. Use the Jenkins pipeline to:
-   - Build the Java Maven application.
-   - Containerize the application with Docker.
-   - Deploy the application by configuring EC2 instances using Ansible.
+### Step 4: Run Jenkins Pipeline
+1. Run Jenkins pipeline and verify from console that the steps are executed.
+2. Connect to Ansible control node and verify the files are copied and the EC2 servers are configured.
 
 ---
 
